@@ -1,4 +1,4 @@
-FROM maven:3-openjdk-17
+FROM maven:3-eclipse-temurin-21
 WORKDIR /wildfly
 EXPOSE 8080
 COPY src src
