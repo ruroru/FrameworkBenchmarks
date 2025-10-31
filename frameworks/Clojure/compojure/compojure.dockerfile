@@ -1,16 +1,12 @@
-FROM clojure:openjdk-11-lein-2.9.1 as lein
+FROM clojure:lein AS lein
 WORKDIR /compojure
-COPY src src
 COPY project.clj project.clj
+COPY src src
 RUN lein ring uberwar
 
-FROM openjdk:11.0.3-jdk-stretch
-WORKDIR /resin
-RUN curl -sL http://caucho.com/download/resin-4.0.61.tar.gz | tar xz --strip-components=1
-RUN rm -rf webapps/*
-COPY --from=lein /compojure/target/hello-compojure-standalone.war webapps/ROOT.war
-COPY resin.xml conf/resin.xml
+FROM  tomcat:9.0.111-jre25-temurin-noble
+WORKDIR /usr/local/tomcat
+COPY --from=lein /compojure/target/*.war webapps/ROOT.war
 
 EXPOSE 8080
-
-CMD ["java", "-jar", "lib/resin.jar", "console"]
+CMD ["catalina.sh", "run"]
