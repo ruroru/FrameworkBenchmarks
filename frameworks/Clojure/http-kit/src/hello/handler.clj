@@ -17,54 +17,56 @@
   Invalid (string) values become 1."
   [queries]
   (let [n (try (Integer/parseInt queries)
-               (catch Exception e 1))]                      ; default to 1 on parse failure
+               (catch Exception e 1))]
     (cond
       (< n 1) 1
       (> n 500) 500
       :else n)))
 
-(defn make-hikari-data-source
-  []
-  (make-datasource {:auto-commit        true
-                    :read-only          false
-                    :connection-timeout 30000
-                    :validation-timeout 5000
-                    :idle-timeout       600000
-                    :max-lifetime       1800000
-                    :minimum-idle       10
-                    :maximum-pool-size  520
-                    :pool-name          "db-pool"
-                    :adapter            "mysql8"
-                    :username           "benchmarkdbuser"
-                    :password           "benchmarkdbpass"
-                    :database-name      "hello_world"
-                    :server-name        "tfb-database"
-                    :port-number        3306
-                    :register-mbeans    false}))
+(def datasource-config
+  {:auto-commit        true
+   :read-only          false
+   :connection-timeout 30000
+   :validation-timeout 5000
+   :idle-timeout       600000
+   :max-lifetime       1800000
+   :minimum-idle       10
+   :maximum-pool-size  256
+   :pool-name          "db-pool"
+   :adapter            "mysql8"
+   :username           "benchmarkdbuser"
+   :password           "benchmarkdbpass"
+   :database-name      "hello_world"
+   :server-name        "tfb-database"
+   :port-number        3306
+   :register-mbeans    false})
 
-;; Get a HikariCP-pooled "raw" jdbc connection
-(defn db-mysql-raw [] {:datasource (make-hikari-data-source)})
+(defonce datasource (atom nil))
 
+(defn get-datasource []
+  (when (nil? @datasource)
+    (reset! datasource (make-datasource datasource-config)))
+  @datasource)
+
+(defn db-spec []
+  {:datasource (get-datasource)})
 
 (defn get-random-world
   "Query a random World record from the database"
   []
   (let [id (inc (rand-int 9999))]
-    (jdbc/query (db-mysql-raw) [(str "select * from world where id = ?") id])))
+    (first (jdbc/query (db-spec) ["select * from world where id = ?" id]))))
 
 (defn run-queries
   "Run query repeatedly, return an array"
   [queries]
-  (flatten                                                  ; Make it a list of maps
-    (take queries
-          (repeatedly get-random-world))))
-
-
+  (mapv (fn [_] (get-random-world))
+        (range queries)))
 
 (defn get-all-fortunes
   "Query all Fortune records from the database using JDBC."
   []
-  (jdbc/query (db-mysql-raw) [(str "select * from fortune")]))
+  (jdbc/query (db-spec) ["select * from fortune"]))
 
 (defn get-fortunes
   "Fetch the full list of Fortunes from the database, sort them by the fortune
@@ -89,36 +91,27 @@
       (for [x fortunes]
         [:tr
          [:td (:id x)]
-         [:td (hiccup-util/escape-html (:message x))]])
-      ]]))
-
+         [:td (hiccup-util/escape-html (:message x))]])]]))
 
 (defn update-and-persist
-  "Using JDBC: Changes the :randomNumber of a number of world entities.
-  Persists the changes to sql then returns the updated entities"
   [queries]
-  (let [world (map #(assoc % :randomnumber (inc (rand-int 9999))) (run-queries queries))]
-    (doseq [{:keys [id randomnumber]} world]
-      (jdbc/update!
-        (db-mysql-raw)
-        :world {:randomnumber randomnumber}
-        ["id = ?" id]))
-    world))
+  (let [worlds (run-queries queries)]
+    (mapv (fn [world]
+            (let [new-random (inc (rand-int 9999))]
+              (jdbc/execute! (db-spec)
+                             ["UPDATE world SET randomnumber = ? WHERE id = ?" new-random (:id world)])
+              (assoc world :randomnumber new-random)))
+          worlds)))
 
 (defn json-serialization
   "Test 1: JSON serialization"
   []
   (ring-resp/response {:message "Hello, World!"}))
 
-
-
 (defn single-query-test
-  "Test 2: Single database query (raw)"
+  "Test 2: Single database query - returns single record directly"
   []
-  (-> 1
-      (run-queries)
-      (first)
-      (ring-resp/response)))
+  (ring-resp/response (get-random-world)))
 
 (defn multiple-queries-test
   "Test 3: Multiple database queries (raw)"
@@ -127,7 +120,6 @@
       (sanitize-queries-param)
       (run-queries)
       (ring-resp/response)))
-
 
 (defn fortune-test
   "Test 4: Fortunes Raw"
@@ -138,7 +130,6 @@
     (ring-resp/response)
     (ring-resp/content-type "text/html")
     (ring-resp/charset "utf-8")))
-
 
 (defn db-updates
   "Test 5: Database updates Raw"
@@ -154,17 +145,16 @@
     (ring-resp/response "Hello, World!")
     (ring-resp/content-type "text/plain")))
 
-;; Define route handlers
 (compojure/defroutes app-routes
                      (GET "/" [] "Hello, World!")
                      (GET "/plaintext" [] plaintext)
                      (GET "/json" [] (json-serialization))
                      (GET "/db" [] (single-query-test))
                      (GET "/queries/:queries" [queries] (multiple-queries-test queries))
-                     (GET "/queries/" [] (multiple-queries-test 1)) ; When param is omitted
+                     (GET "/queries/" [] (multiple-queries-test "1"))
                      (GET "/fortunes" [] (fortune-test))
                      (GET "/updates/:queries" [queries] (db-updates queries))
-                     (GET "/updates/" [] (db-updates 1)) ; When param is omitted
+                     (GET "/updates/" [] (db-updates "1"))
                      (route/not-found "Not Found"))
 
 (defn parse-port [s]
@@ -182,12 +172,11 @@
                                 :thread (* 2 cpu)})
     (println (str "http-kit server listens at :" port))))
 
-
 (defn -main [& args]
   (let [[options _ banner]
         (cli/cli args
-             ["-p" "--port" "Port to listen" :default 8080 :parse-fn parse-port]
-             ["--[no-]help" "Print this help"])]
+                 ["-p" "--port" "Port to listen" :default 8080 :parse-fn parse-port]
+                 ["--[no-]help" "Print this help"])]
     (when (:help options)
       (println banner)
       (System/exit 0))
