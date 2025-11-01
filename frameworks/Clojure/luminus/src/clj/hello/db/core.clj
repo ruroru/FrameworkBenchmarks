@@ -1,7 +1,5 @@
 (ns hello.db.core
   (:require
-    [cheshire.core :refer [generate-string parse-string]]
-    [clojure.java.jdbc :as jdbc]
     [conman.core :as conman]
     [hello.config :refer [env]]
     [mount.core :refer [defstate]]))
