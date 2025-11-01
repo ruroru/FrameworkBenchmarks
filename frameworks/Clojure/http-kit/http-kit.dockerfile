@@ -1,10 +1,13 @@
-FROM clojure:lein-2.8.1
+FROM clojure:lein as lein
 WORKDIR /http-kit
-COPY src src
 COPY project.clj project.clj
-RUN lein deps
+COPY src src
 RUN lein uberjar
+
+FROM openjdk:25-jdk-slim
+WORKDIR /http-kit
+COPY --from=lein /http-kit/target/http-kit-standalone.jar app.jar
 
 EXPOSE 8080
 
-CMD ["java", "-server", "-jar", "target/http-kit-standalone.jar"]
+CMD ["java", "-server", "-XX:+UseParallelGC", "-jar", "app.jar"]

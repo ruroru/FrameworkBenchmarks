@@ -17,4 +17,4 @@ but the main ones are:
 * [Clojure 1.8.0](http://clojure.org/)
 * [http-kit](http://http-kit.org)
 * [Ring-JSON 0.4.0](https://github.com/ring-clojure/ring-json), which in turn uses [Cheshire](https://github.com/dakrone/cheshire), which in turn uses [Jackson](http://jackson.codehaus.org/)
-* [Korma 0.4.2](http://sqlkorma.com/)
+
