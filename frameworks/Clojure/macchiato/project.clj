@@ -1,16 +1,13 @@
 (defproject hello "0.1.0-SNAPSHOT"
   :description "FIXME: write this!"
   :url "http://example.com/FIXME"
-  :dependencies [[bidi "2.0.16"]
-                 [com.cemerick/piggieback "0.2.1"]
-                 [com.taoensso/timbre "4.8.0"]
+  :dependencies [[bidi "2.1.6"]
                  [hiccups "0.3.0"]
-                 [macchiato/core "0.1.6"]
-                 [macchiato/env "0.0.5"]
-                 [javax.xml.bind/jaxb-api "2.2.12"]
+                 [macchiato/core "0.2.24"]
+                 [macchiato/env "0.0.6"]
                  [mount "0.1.11"]
-                 [org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.518"]]
+                 [org.clojure/clojure "1.12.3"]
+                 [org.clojure/clojurescript "1.12.42"]]
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :plugins [[lein-doo "0.1.7"]
             [macchiato/lein-npm "0.6.3"]
@@ -42,8 +39,7 @@
     :figwheel
     {:http-server-root "public"
      :nrepl-port 7000
-     :reload-clj-files {:clj false :cljc true}
-     :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+     :reload-clj-files {:clj false :cljc true}}
     :source-paths ["env/dev"]
     :repl-options {:init-ns user}}
    :test
