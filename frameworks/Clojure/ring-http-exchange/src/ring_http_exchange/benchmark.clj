@@ -10,7 +10,7 @@
     [ring-http-exchange.core :as server])
   (:import
     (com.zaxxer.hikari HikariDataSource)
-    (io.netty.channel.epoll EpollEventLoopGroup)))
+    (java.util.concurrent Executors)))
 
 (def query-fortunes (boa/execute (boa/->NextJdbcAdapter) "fortune.sql"))
 
@@ -21,7 +21,7 @@
               :idle-timeout       600000
               :max-lifetime       1800000
               :minimum-idle       16
-              :maximum-pool-size  64
+              :maximum-pool-size  520
               :register-mbeans    false
               :jdbcUrl            "jdbc:postgresql://tfb-database/hello_world?user=benchmarkdbuser&password=benchmarkdbpass"})
 
@@ -31,13 +31,17 @@
                                         "Content-Type" "text/html; charset=UTF-8"})
 (def ^:private ^:const json-headers {"Server"       "ring-http-exchange"
                                      "Content-Type" "application/json"})
-(def ^:private ^:const plaintext-response {:status  200
-                                           :headers {"Server"       "ring-http-exchange"
-                                                     "Content-Type" "text/plain"}
-                                           :body    "Hello, World!"})
+
 (def ^:private render-fortune (majavat/build-renderer "fortune.html"
                                                       {:renderer (->StringRenderer
                                                                    {:sanitizer (->Html)})}))
+
+
+(defn- plaintext-response []
+  {:status  200
+   :headers {"Server"       "ring-http-exchange"
+             "Content-Type" "text/plain"}
+   :body    "Hello, World!"})
 
 (defn- get-body [datasource]
   (let [context (as-> (query-fortunes datasource) fortunes
@@ -52,6 +56,7 @@
     (server/run-http-server
       (fn [req]
         (case (req :uri)
+          "/plaintext" (plaintext-response)
           "/json" {:status  200
                    :headers json-headers
                    :body    (json/write-value-as-bytes {:message "Hello, World!"})}
@@ -59,7 +64,7 @@
                         {:status  200
                          :headers fortune-headers
                          :body    body})
-          plaintext-response))
+          (plaintext-response)))
       {:port     8080
        :host     "0.0.0.0"
-       :executor (EpollEventLoopGroup.)})))
+       :executor (Executors/newVirtualThreadPerTaskExecutor)})))
