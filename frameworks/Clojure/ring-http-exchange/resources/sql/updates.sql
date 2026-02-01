@@ -1,0 +1,1 @@
+UPDATE world SET randomNumber = :randomNumber WHERE id = :id;

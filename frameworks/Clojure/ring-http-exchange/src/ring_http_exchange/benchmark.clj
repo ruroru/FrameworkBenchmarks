@@ -18,17 +18,17 @@
 (defn -main
   [& args]
   (println "Starting server on port 8080")
-  (let [datasource (connection/->pool HikariDataSource db-spec)
+  (let [data-source (connection/->pool HikariDataSource db-spec)
         use-inputstream? (some #{"--inputstream" "-i" "inputstream"} args)]
-    (.addDataSourceProperty datasource "tcpKeepAlive" "true")
-    (.addDataSourceProperty datasource "useSSL" false)
-    (.addDataSourceProperty datasource "prepStmtCacheSize" "250")
-    (.addDataSourceProperty datasource "cachePrepStmts" "true")
-    (.addDataSourceProperty datasource "prepStmtCacheSqlLimit" "2048")
+    (.addDataSourceProperty data-source "tcpKeepAlive" "true")
+    (.addDataSourceProperty data-source "useSSL" false)
+    (.addDataSourceProperty data-source "prepStmtCacheSize" "250")
+    (.addDataSourceProperty data-source "cachePrepStmts" "true")
+    (.addDataSourceProperty data-source "prepStmtCacheSqlLimit" "2048")
     (server/run-http-server
       (if use-inputstream?
-        (input-stream-handler/get-handler datasource)
-        (string-handler/get-handler datasource))
+        (input-stream-handler/get-handler data-source)
+        (string-handler/get-handler data-source))
       {:port     8080
        :host     "0.0.0.0"
        :executor (Executors/newCachedThreadPool)})))
