@@ -1,14 +1,11 @@
-FROM maven:3.6.1-jdk-11-slim as maven
-WORKDIR /hserver-business
+FROM maven:3-eclipse-temurin-25-alpine as maven
+WORKDIR /app
 COPY pom.xml pom.xml
 COPY src src
-RUN mvn package --quiet
+RUN mvn compile assembly:single -q
 
-FROM openjdk:11.0.3-jdk-slim
-WORKDIR /hserver-business
-COPY --from=maven /hserver-business/target/hserver-business-1.0.jar app.jar
-
-EXPOSE 8888
-
-CMD ["java", "-server", "-XX:+UseNUMA", "-XX:+UseParallelGC", "-XX:+AggressiveOpts", "-Dio.netty.buffer.checkBounds=false", "-Dio.netty.buffer.checkAccessible=false", "-Dio.netty.iouring.iosqeAsyncThreshold=32000", "-jar", "app.jar"]
-
+FROM amazoncorretto:25
+WORKDIR /app
+COPY --from=maven /app/target/hserver-business-1.0-jar-with-dependencies.jar app.jar
+EXPOSE 8080
+CMD ["java", "-XX:+UseNUMA", "-XX:+UseParallelGC", "-jar", "app.jar"]
