@@ -19,17 +19,27 @@
   [& args]
   (println "Starting server on port 8080")
   (let [datasource (connection/->pool HikariDataSource db-spec)
-        use-inputstream? (some #{"--inputstream" "-i" "inputstream"} args)]
+        use-inputstream? (some #{"--inputstream"} args)
+        async? (some #{"--async"} args)]
     (.addDataSourceProperty datasource "tcpKeepAlive" "true")
     (.addDataSourceProperty datasource "useSSL" false)
     (.addDataSourceProperty datasource "prepStmtCacheSize" "250")
     (.addDataSourceProperty datasource "cachePrepStmts" "true")
     (.addDataSourceProperty datasource "prepStmtCacheSqlLimit" "2048")
-    (server/run-http-server
-      (if use-inputstream?
-        (input-stream-handler/get-handler datasource)
-        (string-handler/get-handler datasource))
-      {:port               8080
-       :host               "0.0.0.0"
-       :lazy-request-map?  true
-       :executor           (Executors/newFixedThreadPool (* 3 (.availableProcessors (Runtime/getRuntime))))})))
+
+    (if async?
+      (server/run-http-server
+        (input-stream-handler/get-async-handler datasource)
+        {:port              8080
+         :host              "0.0.0.0"
+         :async?            true
+         :lazy-request-map? true
+         :executor          (Executors/newFixedThreadPool (* 3 (.availableProcessors (Runtime/getRuntime))))})
+      (server/run-http-server
+        (if use-inputstream?
+          (input-stream-handler/get-handler datasource)
+          (string-handler/get-handler datasource))
+        {:port              8080
+         :host              "0.0.0.0"
+         :lazy-request-map? true
+         :executor          (Executors/newFixedThreadPool (* 3 (.availableProcessors (Runtime/getRuntime))))}))))

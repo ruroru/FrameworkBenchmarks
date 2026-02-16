@@ -1,10 +1,15 @@
 (ns ring-http-exchange.model
   (:require [jj.sql.boa :as boa]
             [jj.sql.boa.query.next-jdbc :as next-jdbc-adapter]
-            [jsonista.core :as json]))
+            [jsonista.core :as json])
+  (:import (java.util.concurrent Executors)))
 
 (def ^:const hello-world "Hello, World!")
+
+(def executor-service (Executors/newFixedThreadPool (* 2 (.availableProcessors (Runtime/getRuntime)))))
+
 (def query-fortunes (boa/build-query (next-jdbc-adapter/->NextJdbcAdapter) "fortune.sql"))
+(def async-query-fortunes (boa/build-async-query executor-service (next-jdbc-adapter/->NextJdbcAdapter) "fortune.sql"))
 
 (defn json-body []
   (json/write-value-as-string {:message hello-world}))
