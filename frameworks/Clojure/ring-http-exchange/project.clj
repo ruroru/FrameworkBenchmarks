@@ -12,6 +12,7 @@
                  [org.clojars.jj/boa-sql "1.0.8"]
                  [org.clojars.jj/async-boa-sql "1.0.8"]
                  [hikari-cp "3.3.0"]
+                 [org.clojars.jj/tassu "1.0.2"]
                  [org.clojars.jj/arminio "1.0.0"]
                  [org.clojars.jj/vertx-pg-client-async-boa-adapter "1.0.1"]
                  [org.postgresql/postgresql "42.7.8"]

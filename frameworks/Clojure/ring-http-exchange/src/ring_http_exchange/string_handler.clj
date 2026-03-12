@@ -1,6 +1,7 @@
 (ns ring-http-exchange.string-handler
   (:require
     [jj.majavat :as majavat]
+    [jj.tassu :refer [async-route route GET]]
     [ring-http-exchange.model :as model]))
 
 (defrecord Response [body status headers])
@@ -36,24 +37,26 @@
                                                            :message "Additional fortune added at request time."}))})
              200
              fortune-headers)))))))
-             
+
 (defn get-handler [data-source]
-  (fn [req]
-    (case (req :uri)
-      "/plaintext" (Response. model/hello-world 200 plain-text-headers)
-      "/json" (Response. (model/json-body) 200 json-headers)
-      "/fortunes" (Response. (render-fortune (model/fortunes-body data-source)) 200 fortune-headers)
-      (Response. model/hello-world 200 {"Server"       "ring-http-exchange"
-                                        "Content-Type" "text/plain"}))))
+  (route {"/plaintext" [(GET (fn [_req]
+                               (Response. model/hello-world 200 plain-text-headers)))]
+          "/json"      [(GET (fn [_req]
+                               (Response. (model/json-body) 200 json-headers)))]
+          "/fortunes"  [(GET (fn [_req]
+                               (Response. (render-fortune (model/fortunes-body data-source)) 200 fortune-headers)))]
+          "/"          [(GET (fn [_req]
+                               (Response. model/hello-world 200 {"Server"       "ring-http-exchange"
+                                                                  "Content-Type" "text/plain"})))]}))
 
 (defn get-async-handler [data-source executor]
-  (fn [req respond raise]
-    (if (.equals "/fortunes" (req :uri))
-      (model/async-query-fortunes data-source (create-callback respond executor) raise)
-      (Response. model/hello-world 200 plain-text-headers))))
+  (async-route {"/fortunes" [(GET (fn [req respond raise]
+                                    (model/async-query-fortunes data-source (create-callback respond executor) raise)))]
+                "/"         [(GET (fn [_req respond _raise]
+                                    (respond (Response. model/hello-world 200 plain-text-headers))))]}))
 
 (defn get-vertx-handler [data-source]
-  (fn [req respond raise]
-    (if (.equals "/fortunes" (req :uri))
-      (model/vertx-query-fortunes data-source (create-callback respond) raise)
-      (Response. model/hello-world 200 plain-text-headers))))
+  (async-route {"/fortunes" [(GET (fn [req respond raise]
+                                    (model/vertx-query-fortunes data-source (create-callback respond) raise)))]
+                "/"         [(GET (fn [_req respond _raise]
+                                    (respond (Response. model/hello-world 200 plain-text-headers))))]}))

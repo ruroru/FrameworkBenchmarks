@@ -2,6 +2,7 @@
   (:require
     [jj.majavat :as majavat]
     [jj.majavat.renderer :refer [->InputStreamRenderer]]
+    [jj.tassu :refer [async-route GET]]
     [ring-http-exchange.model :as model]))
 
 (defrecord Response [body status headers])
@@ -24,8 +25,7 @@
         fortune-headers))))
 
 (defn get-handler [data-source]
-  (fn [req respond raise]
-    (if (.equals "/fortunes" (req :uri))
-      (model/vertx-query-fortunes data-source (create-callback respond) raise)
-      (Response. model/hello-world 200 {}))))
-
+  (async-route {"/fortunes" [(GET (fn [_req respond raise]
+                                    (model/vertx-query-fortunes data-source (create-callback respond) raise)))]
+                "/"         [(GET (fn [_req respond _raise]
+                                    (respond (Response. model/hello-world 200 {}))))]}))
