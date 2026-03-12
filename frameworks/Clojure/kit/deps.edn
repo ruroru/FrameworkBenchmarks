@@ -21,7 +21,8 @@
            ;; Database
            org.postgresql/postgresql        {:mvn/version "42.7.8"}
            org.clojars.jj/boa-sql           {:mvn/version "1.0.1"}
-
+           com.layerware/hugsql-adapter-next-jdbc {:mvn/version "0.5.3"}
+           com.layerware/hugsql-core        {:mvn/version "0.5.3"}
 
            ;; kit Libs
            io.github.kit-clj/kit-core       {:mvn/version "1.0.9"}

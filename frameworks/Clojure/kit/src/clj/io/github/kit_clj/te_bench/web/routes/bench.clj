@@ -20,6 +20,7 @@
    ["/fortunes" {:get (partial bench/selmer-fortune-handler db-conn)}]
    ["/majavat-fortunes" {:get (partial bench/majavat-fortune-handler db-conn)}]
    ["/hiccup-fortunes" {:get (partial bench/hiccup-fortune-handler db-conn)}]
+   ["/hugsql-fortunes" {:get (partial bench/hugsql-fortune-handler db-conn)}]
    ])
 
 (defmethod ig/init-key :reitit.routes/bench

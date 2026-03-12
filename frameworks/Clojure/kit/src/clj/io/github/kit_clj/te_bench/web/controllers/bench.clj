@@ -7,6 +7,8 @@
     [jj.majavat.renderer :refer [->StringRenderer]]
     [jj.sql.boa :as boa]
     [next.jdbc :as jdbc]
+    [hugsql.core :as hugsql]
+    [hugsql.adapter.next-jdbc :as adapter]
     [next.jdbc.result-set :as rs]
     [ring.util.http-response :as http-response]
     [selmer.parser :as parser]))
@@ -14,12 +16,14 @@
 ;; -----------
 ;; Utils
 ;; -----------
-
+(hugsql/set-adapter! (adapter/hugsql-adapter-next-jdbc))
 (def ^:const HELLO_WORLD "Hello, World!")
 (def ^:const MAX_ID_ZERO_IDX 9999)
 (def ^:const CACHE_TTL (* 24 60 60))
 (def ^:private render-fortune (majavat/build-html-renderer "html/majavat-fortunes.html"
                                                            {:renderer (->StringRenderer)}))
+
+(hugsql/def-db-fns "sql/hugsql-fortunes.sql")
 
 (defn render-hiccup-fortune [fortunes]
   (hp/html5
@@ -176,3 +180,10 @@
         (sort-by :message fortunes)
         (render-hiccup-fortune fortunes)
         (hiccup-html-response fortunes)))
+
+(defn hugsql-fortune-handler
+  [db-conn _request]
+    (as-> (get-fortunes db-conn) fortunes
+          (conj fortunes {:id 0 :message "Additional fortune added at request time."})
+          (sort-by :message fortunes)
+          (selmer-html-response "fortunes.html" {:messages fortunes})))
